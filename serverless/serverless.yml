@@ -1,0 +1,189 @@
+service:
+  name: sls-emotion-detection
+
+custom:
+  bucket: slsfaces
+  emotionsDBTable: "emotions-table-${self:provider.stage}"
+  stateDBTable: "appstate-table-${self:provider.stage}"
+  webpackIncludeModules: true
+  serverless-offline:
+    port: 4000
+    region: eu-west-2
+  webpack:
+    webpackConfig: "webpack.config.js" # Name of webpack configuration file
+    # includeModules: true   # Node modules configuration for packaging
+    packager: "yarn" # Packager that will be used to package your external modules
+    includeModules:
+      forceExclude:
+        - aws-sdk
+
+# Add the serverless-webpack plugin
+plugins:
+  - serverless-plugin-existing-s3
+  - serverless-webpack
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  region: eu-west-2
+  timeout: 60
+  memorySize: 3008
+  environment:
+    FACES_TABLE: ${self:custom.emotionsDBTable}
+    STATE_TABLE: ${self:custom.stateDBTable}
+    DYNAMODB_TABLE: ${self:service}-${self:provider.stage}
+    BUCKET: ${self:custom.bucket}
+    AZURE_ENDPOINT: "https://uksouth.api.cognitive.microsoft.com/face/v1.0"
+    AZURE_KEY_1: ${file(env.json):AZURE_KEY_1}
+    RAW_IMAGES: raw-images
+    PROCESSED_RAW_IMAGES: processed-raw-images
+    CROPPED_IMAGES: cropped-processed
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action: "s3:*"
+      Resource: "arn:aws:s3:::${self:custom.bucket}/*"
+    - Effect: "Allow"
+      Action: "s3:CreateBucket*"
+      Resource: "arn:aws:s3::*:*"
+
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.FACES_TABLE}"
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.STATE_TABLE}"
+
+functions:
+  uploadImage:
+    handler: handler.uploadImage
+    events:
+      - http:
+          method: post
+          path: uploadImage
+          cors: true
+  processImages:
+    handler: handler.processImages
+  deleteImage:
+    handler: handler.deleteImage
+    events:
+      - http:
+          method: post
+          path: deleteImage
+          cors: true
+  resolveDatabase:
+    handler: handler.resolveDatabase
+    events:
+      - http:
+          method: get
+          path: resolveDatabase
+          cors: true
+
+  images:
+    handler: handler.images
+    events:
+      - http:
+          path: images
+          method: post
+          cors: true
+      - http:
+          path: images
+          method: get
+          cors: true
+
+  state:
+    handler: handler.state
+    events:
+      - http:
+          path: state
+          method: get
+          cors: true
+      - http:
+          path: state
+          method: post
+          cors: true
+
+  getMessage:
+    handler: handler.getMessage
+    events:
+      - http:
+          path: getMessage
+          method: get
+          cors: true
+
+  mocData:
+    handler: handler.mocData
+    events:
+      - http:
+          path: mocData
+          method: get
+          cors: true
+  testUpload:
+    handler: handler.testUpload
+    events:
+      - http:
+          path: testUpload
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    S3UploadBucketPhotos:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucket}
+        AccessControl: PublicRead
+        CorsConfiguration:
+          CorsRules:
+            - AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - HEAD
+              AllowedOrigins:
+                - "*"
+              AllowedHeaders:
+                - "*"
+
+    S3UploadBucketPolicy:
+      Type: "AWS::S3::BucketPolicy"
+      Properties:
+        PolicyDocument:
+          Statement:
+            - Sid: AllowPublicRead
+              Effect: Allow
+              Principal: "*"
+              Action:
+                - "s3:GetObject"
+              Resource: arn:aws:s3:::${self:custom.bucket}/*
+        Bucket:
+          Ref: S3UploadBucketPhotos
+
+    FacesDynamoDBTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: imagekey
+            AttributeType: S
+        KeySchema:
+          - AttributeName: imagekey
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.emotionsDBTable}
+    StateDynamoDBTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: state
+            AttributeType: S
+        KeySchema:
+          - AttributeName: state
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.stateDBTable}

@@ -1,0 +1,9 @@
+type Image {
+  id: ID! @id @unique
+  createdAt: DateTime! @createdAt
+  updatedAt: DateTime! @updatedAt
+  pictured_at: DateTime!
+  azure_data: Json!
+  imagekey: String! @unique
+  source_key: String!
+}

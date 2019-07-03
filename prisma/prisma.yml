@@ -1,0 +1,6 @@
+endpoint: https://eu1.prisma.sh/dan-beaven/judgement-day/dev
+datamodel: datamodel.prisma
+
+generate:
+  - generator: typescript-client
+    output: ../serverless/prisma-client/
