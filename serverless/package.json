@@ -10,7 +10,7 @@
     "@babel/core": "^7.4.5",
     "@types/aws-lambda": "^8.10.17",
     "@types/node": "^12.0.3",
-    "aws-lambda": "^0.1.2",
+    "aws-lambda": "^1.0.5",
     "aws-sdk": "^2.464.0",
     "babel-loader": "^8.0.6",
     "cache-loader": "^3.0.1",
