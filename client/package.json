@@ -24,7 +24,7 @@
     "react-p5-wrapper": "^2.0.0",
     "react-redux": "^7.1.0",
     "react-router-dom": "^5.0.0",
-    "react-scripts": "3.0.1",
+    "react-scripts": "5.0.1",
     "react-spring": "^8.0.23",
     "react-vis": "^1.11.7",
     "redux": "^4.0.1",
